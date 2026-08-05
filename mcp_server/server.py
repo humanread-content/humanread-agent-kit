@@ -25,6 +25,8 @@ SERVER_INSTRUCTIONS += """
 At the first completed draft, remind the author once to keep editable source in an author-controlled private repository or local backup. Never ask for or store their GitHub token, Humanread API key, OAuth secret, .env, or private key. After publication, report public_repository_url and explain it can be cloned or downloaded as an extra backup of the public snapshot only; it does not contain later drafts or replace the private editable-source backup."""
 SERVER_INSTRUCTIONS += """
 Use report_platform_issue when you directly encounter a reproducible Humanread platform bug, broken API/MCP behavior, accessibility defect, concrete improvement, or credible suspected copyright infringement. For copyright, report proactively with category=copyright only when there is concrete evidence: identify the Humanread novel ID/public URL, an independently located likely source URL, why the source predates the submission, and a concise description of substantial protected overlap. Do not rely only on title, genre, common tropes, style, an AI detector, or vague similarity. Never paste private manuscript text or long excerpts; use URLs and a short non-infringing description. Do not report public-domain material merely because it is copied, but modern translations, annotations, editions, and images may remain protected. Check recent reports to avoid duplicates. Tell the user the report ID and that it is an unverified suspicion for operator review, not a legal finding; the private operator GitHub issue is not exposed. Never include credentials, authorization headers, email, personal data, or exploit payloads."""
+SERVER_INSTRUCTIONS += """
+For a cover, use upload_cover_image rather than embedding it in a chapter or sending a remote URL. Ask the author to approve the exact local PNG, JPEG, or WebP and confirm that they hold publication rights before setting rights_confirmed=true. Never infer approval for an AI-generated, suggested, stock, or previously used image. Share the returned draft_preview_url and ask the author to inspect the 2:3 center crop; replace it if requested. A cover update changes only the draft and invalidates any pending review, while an existing published snapshot remains unchanged until a new review is approved. Published cover traffic goes directly to the immutable public GitHub snapshot."""
 
 
 class HumanreadTokenVerifier(TokenVerifier):
@@ -272,6 +274,44 @@ async def upload_image_asset(novel_id: int, image_path: str, alt_text: str) -> d
 
 
 @mcp.tool()
+async def upload_cover_image(novel_id: int, image_path: str, rights_confirmed: bool = False) -> dict:
+    """Set a draft cover from a local PNG, JPEG, or WebP after author rights confirmation.
+
+    Ask the author to approve this exact local file and confirm publication rights;
+    do not infer either for generated, stock, suggested, or previously used art.
+    Humanread strips metadata, center-crops to 2:3, re-encodes WebP, and stores it
+    only in the novel Git repository. Share draft_preview_url and ask the author
+    to inspect the crop. This invalidates pending review, but an existing public
+    snapshot stays unchanged until a newly reviewed version is published.
+    """
+    if not rights_confirmed:
+        raise ValueError("Confirm with the author that they have rights to use and publish this cover")
+    path = Path(image_path)
+    if not path.is_file() or path.stat().st_size > 10 * 1024 * 1024:
+        raise ValueError("Cover must be a local PNG, JPEG, or WebP no larger than 10 MB")
+    return await call("POST", f"/api/v1/novels/{novel_id}/cover", {"content_base64": base64.b64encode(path.read_bytes()).decode(), "rights_confirmed": True})
+
+
+@mcp.tool()
+async def upload_cover_image_base64(novel_id: int, content_base64: str, rights_confirmed: bool = False) -> dict:
+    """Set a cover through remote MCP using base64 PNG, JPEG, or WebP bytes.
+
+    Prefer this tool when the MCP server cannot access the Agent's local path.
+    Obtain approval of the exact image and publication-rights confirmation first,
+    then share the returned preview so the author can inspect the 2:3 crop.
+    """
+    if not rights_confirmed:
+        raise ValueError("Confirm with the author that they have rights to use and publish this cover")
+    try:
+        content = base64.b64decode(content_base64, validate=True)
+    except (ValueError, TypeError) as exc:
+        raise ValueError("content_base64 must be valid base64 image bytes") from exc
+    if not content or len(content) > 10 * 1024 * 1024:
+        raise ValueError("Cover must be no larger than 10 MB")
+    return await call("POST", f"/api/v1/novels/{novel_id}/cover", {"content_base64": content_base64, "rights_confirmed": True})
+
+
+@mcp.tool()
 async def set_publication_status(novel_id: int, status: str, reader_license: str = "", rights_confirmed: bool = False, public_copy_acknowledged: bool = False, author_approval: str = "") -> dict:
     """Set draft/review, or publish with the author's explicit rights and license choices.
 
@@ -334,8 +374,26 @@ async def revoke_translation_grant(novel_id: int, grant_id: int) -> dict:
 
 @mcp.tool()
 async def create_translation(source_novel_id: int, target_language: str) -> dict:
-    """Create a linked translation draft using self-ownership or an active grant."""
+    """Create a linked translation draft using self-ownership or an active grant.
+
+    Always use this for a new translation; never create_novel for a language edition.
+    """
     return await call("POST", f"/api/v1/novels/{source_novel_id}/translations", {"target_language": target_language})
+
+
+@mcp.tool()
+async def link_existing_translation(translation_novel_id: int, source_novel_id: int, expected_draft_commit_sha: str, author_confirmation: str) -> dict:
+    """Correct an independently created owned novel by linking it to its published source.
+
+    Use only after the author identifies the exact translation and source novels and
+    explicitly confirms the correction. Read get_novel_status immediately first and
+    pass its draft commit. The languages must differ, and cross-author linking needs
+    an active grant. Share the preview and create a new review after Git sync; an
+    immutable published snapshot is never rewritten.
+    """
+    if len(author_confirmation.strip()) < 10:
+        raise ValueError("Explicit confirmation naming the translation and source is required")
+    return await call("POST", f"/api/v1/novels/{translation_novel_id}/translation-link", {"source_novel_id": source_novel_id, "expected_draft_commit_sha": expected_draft_commit_sha, "author_confirmation": author_confirmation})
 
 
 @mcp.tool()
