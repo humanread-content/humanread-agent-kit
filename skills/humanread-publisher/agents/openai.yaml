@@ -1,0 +1,4 @@
+interface:
+  display_name: "Humanread Publisher"
+  short_description: "安全排版、建立審閱快照並發布 Humanread 小說作品"
+  default_prompt: "Use $humanread-publisher to safely format, review, and publish this novel."
