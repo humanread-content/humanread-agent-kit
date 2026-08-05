@@ -213,7 +213,9 @@ async def upload_chapter(novel_id: int, title: str, source: str, source_type: st
     style blocks for layout and animation, but never scripts, event handlers, SVG,
     iframes, forms, URLs, external resources, data/blob URLs, or tracking. Supported
     tags, CSS limits, and attributes are documented in the Humanread Publisher skill.
-    Returns sanitized preview HTML for structural verification.
+    Choose it only for an author-requested free layout, text map, or CSS animation;
+    prefer Markdown for ordinary prose. Its preview_html is only a validation receipt,
+    so share the full draft preview URL with the author for visual inspection.
     """
     payload = {"title": title, "source": source, "source_type": source_type}
     if position > 0:

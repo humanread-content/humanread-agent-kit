@@ -72,6 +72,22 @@ only in `<style>` blocks, not `style` attributes. Do not imitate Humanread login
 payment, consent, or other trusted platform UI. These restrictions apply before
 upload: do not depend on forbidden features and expect the sanitizer to remove them.
 
+Minimal tool pattern:
+
+```text
+upload_chapter(
+  novel_id=<owned novel>,
+  title="文字地圖",
+  source_type="sandbox_html",
+  source="<style>.person{animation:walk 4s steps(4) infinite}@keyframes walk{to{transform:translateX(12ch)}}</style><main aria-label='文字地圖'><pre>城鎮────森林</pre><span class='person'>人</span></main>"
+)
+```
+
+Treat the returned `preview_html` only as a validation receipt. Then call
+`get_author_preview`, give the author its `draft_preview_url`, and explicitly ask
+them to inspect motion, layout, mobile width, and reduced-motion behavior. Do not
+claim the sandbox design is finished from the validation receipt alone.
+
 ## Workflow
 
 1. Read and obey the supported subset before planning any layout.
