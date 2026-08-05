@@ -127,7 +127,7 @@ claim the sandbox design is finished from the validation receipt alone.
 - Keep original-author and translator attribution. Humanread inserts it into preview, review, Git manifests, and public reading pages.
 - A revoked grant blocks review/publication. A translation stays bound to its authorized source version even if a newer original is published; report that it is based on the older hash and ask for a new grant/edition before translating later changes. Never copy content into a fresh standalone novel.
 - Share the linked draft preview with the translator, then use the same immutable review and exact-version approval workflow as an original edition.
-- Check `list_notifications` for newly published source versions. Report old/new version IDs and hashes, whether new authorization is required, and the affected translation. Never change the bound source or overwrite translated chapters automatically. Mark the notification read only after reporting it.
+- Check `list_notifications` for newly published source versions. Report old/new version IDs and hashes, whether new authorization is required, and the affected translation. Obtain explicit confirmation for the exact new source version, read the translation's current `draft_commit_sha`, then call `start_translation_revision`. For another translator, wait until the original author issues a grant for that exact new version; same-owner editions need no new grant. Next call `get_translation_source`, update the translation deliberately, share the preview, and create a new review. Never automatically overwrite translated chapters or imply the old public snapshot changed. Mark the notification read only after reporting it.
 
 ## Engagement rules
 

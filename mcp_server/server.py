@@ -20,7 +20,7 @@ After arranging content and theme, call get_author_preview and give its draft_pr
 SERVER_INSTRUCTIONS += """
 Translations are separate editions bound to one immutable published source version. Translate only when the author owns the source or list_translation_opportunities shows an active grant for the authenticated translator and target language. Create the edition with create_translation, then read its exact source with get_translation_source. Preserve meaning, attribution, chapter structure, warnings, names, and deliberate formatting; do not silently abridge, rewrite, or invent passages. Tell the author which source version/hash was translated. A revoked grant blocks new review/publication; a newer source needs a new grant before rebasing. The Agent must not work around either rule by creating an unrelated novel."""
 SERVER_INSTRUCTIONS += """
-Check list_notifications when managing translations. A source-version notification is informational and never authorizes automatic rebasing or overwriting translated prose. Report old/new version IDs and hashes and whether the original author must issue a new grant; mark it read only after reporting. Engagement metrics are read-only signals: never automate views, accounts, or likes. Humanread counts a visible 10-second read once per visitor/novel/day and one like per Google account/novel, but does not claim manipulation is impossible."""
+Check list_notifications when managing translations. A source-version notification is informational and never authorizes automatic rebasing or overwriting translated prose. Report old/new version IDs and hashes and whether the original author must issue a new grant. After explicit author confirmation, use start_translation_revision for the exact new version, then read the new source, update deliberately, preview, and request a new review; the old public snapshot stays immutable. Mark the notification read only after reporting. Engagement metrics are read-only signals: never automate views, accounts, or likes. Humanread counts a visible 10-second read once per visitor/novel/day and one like per Google account/novel, but does not claim manipulation is impossible."""
 SERVER_INSTRUCTIONS += """
 At the first completed draft, remind the author once to keep editable source in an author-controlled private repository or local backup. Never ask for or store their GitHub token, Humanread API key, OAuth secret, .env, or private key. After publication, report public_repository_url and explain it can be cloned or downloaded as an extra backup of the public snapshot only; it does not contain later drafts or replace the private editable-source backup."""
 SERVER_INSTRUCTIONS += """
@@ -394,6 +394,21 @@ async def link_existing_translation(translation_novel_id: int, source_novel_id: 
     if len(author_confirmation.strip()) < 10:
         raise ValueError("Explicit confirmation naming the translation and source is required")
     return await call("POST", f"/api/v1/novels/{translation_novel_id}/translation-link", {"source_novel_id": source_novel_id, "expected_draft_commit_sha": expected_draft_commit_sha, "author_confirmation": author_confirmation})
+
+
+@mcp.tool()
+async def start_translation_revision(translation_novel_id: int, source_version_id: int, expected_draft_commit_sha: str, author_confirmation: str) -> dict:
+    """Bind an existing linked translation draft to the source's current published version.
+
+    Use after reporting a source-version notification and obtaining explicit author
+    confirmation. Same-owner editions need no new grant; another translator needs a
+    grant for this exact source version. This never changes the old public snapshot.
+    Afterward read get_translation_source, update the translated chapters, preview,
+    and create a new review. Never treat rebasing as permission to overwrite prose.
+    """
+    if len(author_confirmation.strip()) < 10:
+        raise ValueError("Explicit confirmation for the exact source version is required")
+    return await call("POST", f"/api/v1/novels/{translation_novel_id}/translation-revisions", {"source_version_id": source_version_id, "expected_draft_commit_sha": expected_draft_commit_sha, "author_confirmation": author_confirmation})
 
 
 @mcp.tool()
