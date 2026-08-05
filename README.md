@@ -1,8 +1,42 @@
-# Humanread Agent Kit
+# Humanread MCP Server & AI Novel Publishing Skill
 
-Official public MCP integration and publisher skill for [人閱 Humanread](https://humanread.surl.tw). Humanread lets authors work with an AI agent to format, preview, review, translate, and publish novels while readers use the web interface.
+[![CI](https://github.com/humanread-content/humanread-agent-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/humanread-content/humanread-agent-kit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
+
+Official open-source **Model Context Protocol (MCP) server** and **AI agent skill** for [人閱 Humanread](https://humanread.surl.tw), a multilingual novel publishing and reading platform. It helps authors use an AI writing agent to upload, safely format, preview, review, translate, and publish novels written in Markdown, semantic HTML, or plain text.
+
+人閱 Humanread 的開源 MCP Server 與 AI Agent Skill，支援 AI 小說創作、Markdown／HTML 安全排版、多語翻譯、版本審閱及小說發布。
 
 This repository contains client-side integration code only. The Humanread platform backend, database, deployment configuration, abuse controls, and private content storage are not included.
+
+## Features
+
+- **AI-assisted novel publishing:** create works, upload chapters, edit metadata, and publish through MCP tools.
+- **Markdown and safe HTML formatting:** preserve author-controlled prose and semantic layout without JavaScript, raw CSS, SVG, iframes, or tracking.
+- **Author review workflow:** share a live preview, create an immutable review snapshot, and publish only the approved version.
+- **Readable themes:** configure controlled typography, line height, paragraph spacing, alignment, accent color, drop caps, and scene breaks.
+- **Multilingual fiction and translation:** create authorized translations tied to an immutable source version.
+- **Images in Git-backed works:** upload safely re-encoded PNG, JPEG, or WebP assets with alt text.
+- **Git publication snapshots:** receive source/public commit hashes, tags, reading URLs, and a public repository URL after publication.
+- **Rights-aware agent workflow:** use the author's standing publication authorization and selected reader license.
+- **Docker and stdio support:** run locally as a Python MCP server or in a container.
+
+## Use cases
+
+- Connect an AI coding or writing agent to a structured novel publishing API.
+- Turn a Markdown manuscript into a safely themed online book.
+- Let an author inspect the exact layout before an agent publishes it.
+- Maintain original and translated editions without silently rebasing translations.
+- Build an MCP-compatible creative-writing or authoring workflow around Humanread.
+
+## Repository contents
+
+```text
+mcp_server/server.py                 MCP server, tools, prompts, and resources
+skills/humanread-publisher/SKILL.md Agent workflow and safe-formatting rules
+Dockerfile                           Containerized stdio/HTTP runner
+```
 
 ## Get an API key
 
