@@ -14,7 +14,7 @@ PUBLIC_URL = os.getenv("APP_URL", "https://humanread.surl.tw").rstrip("/")
 PUBLISHER_GUIDE = Path(__file__).resolve().parents[1] / "skills" / "humanread-publisher" / "SKILL.md"
 SERVER_INSTRUCTIONS = """Humanread lets an authenticated author create, upload, review, and publish novels.
 If Humanread authentication is missing, stop and tell the user to open https://humanread.surl.tw/login, sign in with Google, accept the current terms, and generate an API key in the Author Studio. Tell them to configure it privately in their MCP client as the Authorization: Bearer header, then reconnect. Never ask them to paste or reveal the key in chat, a manuscript, an issue, or a repository.
-Preserve the author's prose unless editing is explicitly requested. Use Markdown, plain text, or only the allowlisted semantic HTML documented at humanread://publisher-guide. Never use JavaScript, CSS, SVG, remote images, forms, iframes, tracking, or unsupported markup. Configure appearance only through set_safe_theme. Configure controlled genres, tags, age rating, and warnings through set_discovery_metadata; never soften an author-supplied warning and confirm any agent-inferred warning with the author.
+Preserve the author's prose unless editing is explicitly requested. Use Markdown, plain text, allowlisted semantic HTML, or the isolated sandbox_html format documented at humanread://publisher-guide. CSS is allowed only inside sandbox_html and only under its restricted rules. Never use JavaScript, SVG, remote resources, forms, iframes, tracking, or unsupported markup. Configure ordinary reading appearance through set_safe_theme. Configure controlled genres, tags, age rating, and warnings through set_discovery_metadata; never soften an author-supplied warning and confirm any agent-inferred warning with the author.
 The public author name is a user-selected pen name, not a value for the agent to infer. Use set_pen_name only when the author explicitly supplies or approves the exact public text. Explain that it affects future review snapshots and does not rewrite already published or pending immutable versions. API-key creation records the author's standing rights confirmation, public-copy acknowledgement, and default reader license. Normal Agent publication inherits them without asking again. Change the license only when the author gives a different instruction.
 After arranging content and theme, call get_author_preview and give its draft_preview_url to the author so they can inspect the current layout while signed in. This live preview is not an approval snapshot. After every content, theme, or metadata change, poll get_novel_status until sync_status is synced. Correct failures and call retry_novel_sync; do not duplicate the novel. Default to status=review only after the author confirms the preview is ready. Never call status=published unless the author has explicitly approved publishing the exact current review/snapshot. Publishing is asynchronous, so poll status and report IDs, hashes, commits, tags, and URLs."""
 SERVER_INSTRUCTIONS += """
@@ -207,11 +207,12 @@ async def create_novel(title: str, summary: str = "", cover_color: str = "#c86b4
 
 @mcp.tool()
 async def upload_chapter(novel_id: int, title: str, source: str, source_type: str = "markdown", position: int = 0) -> dict:
-    """Upload Markdown, plain text, or allowlisted semantic HTML.
+    """Upload Markdown, plain text, allowlisted HTML, or isolated sandbox_html.
 
-    HTML must not contain scripts, event handlers, style/CSS, MDX/JSX, SVG,
-    iframes, forms, interactive widgets, data/blob URLs, or tracking. Supported
-    tags and attributes are documented in the Humanread Publisher skill.
+    Ordinary HTML cannot contain CSS. sandbox_html may contain restricted CSS in
+    style blocks for layout and animation, but never scripts, event handlers, SVG,
+    iframes, forms, URLs, external resources, data/blob URLs, or tracking. Supported
+    tags, CSS limits, and attributes are documented in the Humanread Publisher skill.
     Returns sanitized preview HTML for structural verification.
     """
     payload = {"title": title, "source": source, "source_type": source_type}

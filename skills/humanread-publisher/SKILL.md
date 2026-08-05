@@ -1,6 +1,6 @@
 ---
 name: humanread-publisher
-description: Design, upload, safely theme, preview, review, and publish Markdown, HTML, or text novels through the Humanread MCP server. Use for any Humanread novel creation or publication task.
+description: Design, upload, safely theme, preview, review, and publish Markdown, HTML, text, or isolated HTML+CSS novels through the Humanread MCP server. Use for any Humanread novel creation or publication task.
 ---
 
 # Humanread Publisher
@@ -49,12 +49,35 @@ If the requested design requires one of these features, explain that Humanread d
 not preserve it and create the closest semantic layout using the allowlist. Never
 upload unsupported markup merely to see whether the sanitizer accepts it.
 
+## Isolated HTML + CSS chapters
+
+Use `source_type=sandbox_html` only when the author requests free positioning, a
+text map, CSS animation, or another presentation that the normal reading theme
+cannot express. The source is direct HTML with CSS inside `<style>` blocks. It is
+rendered in a fixed, sandboxed iframe and is intentionally separate from the normal
+reading page. Tell the author that the full draft preview URL is the authoritative
+way to inspect it; `preview_html` only confirms that validation passed.
+
+In `sandbox_html`, design only with semantic HTML, `class`, `id`, `title`, `role`,
+`aria-label`, and `aria-hidden`. CSS selectors, positioning, transforms,
+transitions, `@keyframes`, and safe `@media` rules are supported. Animation and
+transition durations must be at least 0.34 seconds. Keep each chapter below 500
+elements and CSS below 64 KiB. Readers receive a pause/replay control, and motion
+is disabled when their operating system requests reduced motion.
+
+Never design or submit JavaScript, event attributes, SVG, MathML, canvas, forms,
+inputs, buttons, iframe, object, embed, audio, video, `url()`, `@import`, external
+fonts, external images, network requests, or `data:` / `blob:` resources. Put styles
+only in `<style>` blocks, not `style` attributes. Do not imitate Humanread login,
+payment, consent, or other trusted platform UI. These restrictions apply before
+upload: do not depend on forbidden features and expect the sanitizer to remove them.
+
 ## Workflow
 
 1. Read and obey the supported subset before planning any layout.
 2. Determine title, summary, ordered chapters, desired visual tone, public pen name, and final mode: `review` or `published`. If the author asks to set or change the pen name, repeat the exact public text and obtain confirmation before calling `set_pen_name`; never infer it from Google profile data. Explain that it affects future review snapshots and does not rewrite published or pending immutable versions.
 3. Preserve prose exactly unless the author explicitly requests editing.
-4. Prefer Markdown for conventional prose, or `text` for untouched UTF-8 manuscripts. Use allowlisted semantic HTML for epigraphs, scene dividers, or figure captions.
+4. Prefer Markdown for conventional prose, or `text` for untouched UTF-8 manuscripts. Use allowlisted semantic HTML for epigraphs, scene dividers, or figure captions. Use `sandbox_html` only for an author-requested free layout or CSS animation and obey its isolated-format rules above.
 5. Run `create_novel`, then `upload_chapter` in reading order.
    For illustrations, wait for Git sync, run `upload_image_asset` with meaningful alt text, and insert only its returned Markdown/HTML. Never upload SVG, animation, tracking pixels, secrets, or unrelated files.
 6. Configure layout only through `set_safe_theme`. Use `font` (`serif`, `sans`, `mono`), `font_size` (14–24), `line_height` (1.4–2.4), `paragraph_spacing` (0.5–3), `text_align` (`left`, `justify`), hex `accent_color`, `drop_cap`, and `scene_break` (`line`, `stars`, `dots`). Never send raw CSS.
