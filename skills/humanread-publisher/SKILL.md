@@ -66,8 +66,12 @@ elements and CSS below 64 KiB. Readers receive a pause/replay control, and motio
 is disabled when their operating system requests reduced motion.
 
 Never design or submit JavaScript, event attributes, SVG, MathML, canvas, forms,
-inputs, buttons, iframe, object, embed, audio, video, `url()`, `@import`, external
-fonts, external images, network requests, or `data:` / `blob:` resources. Put styles
+inputs, buttons, iframe, object, embed, audio, video, `@import`, external
+fonts, external images, network requests, or `data:` / `blob:` resources. The only
+permitted image URL is an exact `humanread-asset:<sha256>` returned after uploading
+that image to this same novel with `upload_image_asset`. It may be used as an
+`<img src>` or inside CSS `url()`; never invent a hash, reuse another novel's asset,
+or use SVG. Put styles
 only in `<style>` blocks, not `style` attributes. Do not imitate Humanread login,
 payment, consent, or other trusted platform UI. These restrictions apply before
 upload: do not depend on forbidden features and expect the sanitizer to remove them.
@@ -83,6 +87,13 @@ upload_chapter(
 )
 ```
 
+For a layered scene, upload the background and transparent character separately,
+then place the two returned references in the same novel chapter. Prefer `<img>`
+layers with absolute positioning; animate the character with `transform`, and keep
+the reduced-motion result legible. Published images resolve directly to the pinned
+public Git snapshot. Humanread's promotional GIF is an offline illustrative render,
+not output produced by the hosted sandbox.
+
 Treat the returned `preview_html` only as a validation receipt. Then call
 `get_author_preview`, give the author its `draft_preview_url`, and explicitly ask
 them to inspect motion, layout, mobile width, and reduced-motion behavior. Do not
@@ -95,7 +106,7 @@ claim the sandbox design is finished from the validation receipt alone.
 3. Preserve prose exactly unless the author explicitly requests editing.
 4. Prefer Markdown for conventional prose, or `text` for untouched UTF-8 manuscripts. Use allowlisted semantic HTML for epigraphs, scene dividers, or figure captions. Use `sandbox_html` only for an author-requested free layout or CSS animation and obey its isolated-format rules above.
 5. Run `create_novel`, then `upload_chapter` in reading order.
-   For illustrations, wait for Git sync, run `upload_image_asset` with meaningful alt text, and insert only its returned Markdown/HTML. Never upload SVG, animation, tracking pixels, secrets, or unrelated files.
+   For illustrations, wait for Git sync, run `upload_image_asset` with meaningful alt text, and insert only its returned Markdown/HTML or exact sandbox asset reference in that same novel. Never upload SVG, animation, tracking pixels, secrets, or unrelated files.
    Always address the cover before presenting the first complete draft preview. Proactively propose a cover direction based on the author's approved brief. If image generation is available and the author wants a generated cover, create a candidate and show the exact image for approval; otherwise ask for an author-supplied image. Do not silently skip the cover, but do not block review if the author explicitly chooses the color fallback. Use `upload_cover_image`; when connected to the hosted/remote MCP that cannot read the Agent's filesystem, base64-encode the local file and use `upload_cover_image_base64` instead. Never embed a cover as a chapter image or pass a remote URL. Ask the author to approve the exact PNG, JPEG, or WebP and separately confirm they hold the rights to publish it. Do not infer either approval for generated, suggested, stock, or previously used art. Call the selected tool with `rights_confirmed=true`, then give the returned `draft_preview_url` to the author and ask them to inspect the 2:3 center crop on desktop and mobile. Replace it if requested. Humanread removes metadata, re-encodes WebP, and stores it only in the novel Git repo. A cover change invalidates pending review; an existing published snapshot remains unchanged until a new review is approved. Published pages load the immutable cover directly from the public GitHub snapshot.
    For social sharing, offer one restrained 1200 × 630 book card and optional chapter-specific cards only where a chapter has a distinctive visual scene. Use `upload_share_card` or `upload_share_card_base64` with `chapter_id=0` for the book or the exact chapter ID for a chapter. Ask the author to approve the exact image and confirm publication rights before setting `rights_confirmed=true`; never infer approval for Agent-generated art. Keep important subjects and short text inside crop-safe margins, keep essential story information in HTML rather than only in the image, and use a representative static moment for animated chapters. Humanread strips metadata, center-crops, and re-encodes WebP. Published snapshots expose immutable `share/book.webp` and `share/chapters/{position}.webp`; a missing chapter card falls back to the book card or cover. Replacing or removing a card invalidates pending review but never rewrites an existing public snapshot.
 6. Configure layout only through `set_safe_theme`. Use `font` (`serif`, `sans`, `mono`), `font_size` (14–24), `line_height` (1.4–2.4), `paragraph_spacing` (0.5–3), `text_align` (`left`, `justify`), hex `accent_color`, `drop_cap`, and `scene_break` (`line`, `stars`, `dots`). Never send raw CSS.

@@ -32,6 +32,8 @@ SERVER_INSTRUCTIONS += """
 For social sharing, offer a restrained 1200x630 book card and optional chapter cards for distinctive scenes. Use upload_share_card only after the author approves the exact image and confirms publication rights. Keep crop-safe margins and make a representative static frame for animated chapters. Humanread publishes immutable share/book.webp or share/chapters/{position}.webp files; a missing chapter card falls back to the book card or cover."""
 SERVER_INSTRUCTIONS += """
 For non-trivial layout or interaction work, search_design_knowledge before inventing a pattern. Tell the author which immutable recipe version you apply, adapt it, and validate the result in Humanread's current sandbox. After a successful original design, read get_knowledge_base_mode. If private or public, automatically call save_design_recipe without interrupting for per-recipe approval. Store only reusable technique, minimal synthetic example, constraints, and accessibility behavior—never story prose, private conversation, named fictional entities, credentials, remote resources, or third-party assets. If disabled, do not extract or upload. Visibility is account-wide; never offer a per-recipe visibility choice."""
+SERVER_INSTRUCTIONS += """
+Sandbox images must first be uploaded with upload_image_asset to the same novel. Use only its exact humanread-asset SHA reference in img src or CSS url(); never use external/data/blob URLs, SVG, invented hashes, or another novel's assets. For layered scenes, upload background and transparent sprite separately. Published assets load from the immutable public Git snapshot. The promotional GIF is an offline illustration, not sandbox output."""
 
 
 class HumanreadTokenVerifier(TokenVerifier):
@@ -341,7 +343,12 @@ async def update_novel_details(novel_id: int, expected_draft_commit_sha: str, ti
 
 @mcp.tool()
 async def upload_image_asset(novel_id: int, image_path: str, alt_text: str) -> dict:
-    """Store a local PNG, JPEG, or WebP in the novel's private repo after safe re-encoding."""
+    """Store a local image in this novel's repo and return its immutable reference.
+
+    In sandbox_html, use only the returned humanread-asset SHA reference in an
+    img src or CSS url(). It is resolved only for this same novel; external URLs,
+    data/blob URLs, SVG, and another novel's assets remain forbidden.
+    """
     path = Path(image_path)
     if not path.is_file() or path.stat().st_size > 10 * 1024 * 1024:
         raise ValueError("Image must be a local file no larger than 10 MB")
