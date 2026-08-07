@@ -356,6 +356,25 @@ async def upload_image_asset(novel_id: int, image_path: str, alt_text: str) -> d
 
 
 @mcp.tool()
+async def upload_image_asset_base64(novel_id: int, content_base64: str, alt_text: str) -> dict:
+    """Upload a same-novel sandbox image through remote MCP using base64 bytes.
+
+    Prefer this when the hosted MCP server cannot read the Agent's local path.
+    The API accepts PNG, JPEG, or WebP, safely re-encodes it, and returns the only
+    humanread-asset reference permitted in this novel's img src or CSS url().
+    """
+    try:
+        content = base64.b64decode(content_base64, validate=True)
+    except (ValueError, TypeError) as exc:
+        raise ValueError("content_base64 must be valid base64 image bytes") from exc
+    if not content or len(content) > 10 * 1024 * 1024:
+        raise ValueError("Image must be no larger than 10 MB")
+    if not alt_text.strip():
+        raise ValueError("Meaningful alt_text is required; use a concise description or mark decorative intent")
+    return await call("POST", f"/api/v1/novels/{novel_id}/assets", {"content_base64": content_base64, "alt_text": alt_text})
+
+
+@mcp.tool()
 async def upload_cover_image(novel_id: int, image_path: str, rights_confirmed: bool = False) -> dict:
     """Set a draft cover from a local PNG, JPEG, or WebP after author rights confirmation.
 
