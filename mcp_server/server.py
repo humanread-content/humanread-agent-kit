@@ -273,6 +273,17 @@ async def get_novel_engagement(novel_id: int) -> dict:
 
 
 @mcp.tool()
+async def get_publication_defaults() -> dict:
+    """Read the effective reader license saved with the current API key.
+
+    Publication automatically inherits this license when reader_license is omitted.
+    If standing_publication_authorization is false, tell the author to rotate their
+    API key in Author Studio rather than guessing a legal setting.
+    """
+    return await call("GET", "/api/v1/me")
+
+
+@mcp.tool()
 async def retry_novel_sync(novel_id: int) -> dict:
     """Retry a failed private Git/GitHub synchronization job."""
     return await call("POST", f"/api/v1/novels/{novel_id}/sync")
@@ -467,7 +478,7 @@ async def approve_review_version(novel_id: int, version_id: int, author_approval
     """
     if not author_approval.strip():
         raise ValueError("Explicit author approval is required")
-    return await call("POST", f"/api/v1/novels/{novel_id}/reviews/{version_id}/decision", {"decision": "approve", "reader_license": reader_license, "rights_confirmed": rights_confirmed, "public_copy_acknowledged": public_copy_acknowledged, "approval_statement": author_approval})
+    return await call("POST", f"/api/v1/novels/{novel_id}/reviews/{version_id}/decision", {"decision": "approve", "reader_license": reader_license or None, "rights_confirmed": rights_confirmed, "public_copy_acknowledged": public_copy_acknowledged, "approval_statement": author_approval})
 
 
 @mcp.tool()
