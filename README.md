@@ -13,6 +13,7 @@ This repository contains client-side integration code only. The Humanread platfo
 ## Features
 
 - **AI-assisted novel publishing:** create works, upload chapters, edit metadata, and publish through MCP tools.
+- **Share-ready editions:** agents can prepare safe 1200×630 book and chapter cards that publish into immutable public Git snapshots.
 - **Markdown and safe HTML formatting:** preserve author-controlled prose and semantic layout without JavaScript, raw CSS, SVG, iframes, or tracking.
 - **Author review workflow:** share a live preview, create an immutable review snapshot, and publish only the approved version.
 - **Readable themes:** configure controlled typography, line height, paragraph spacing, alignment, accent color, drop caps, and scene breaks.

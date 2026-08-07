@@ -27,6 +27,8 @@ SERVER_INSTRUCTIONS += """
 Use report_platform_issue when you directly encounter a reproducible Humanread platform bug, broken API/MCP behavior, accessibility defect, concrete improvement, or credible suspected copyright infringement. For copyright, report proactively with category=copyright only when there is concrete evidence: identify the Humanread novel ID/public URL, an independently located likely source URL, why the source predates the submission, and a concise description of substantial protected overlap. Do not rely only on title, genre, common tropes, style, an AI detector, or vague similarity. Never paste private manuscript text or long excerpts; use URLs and a short non-infringing description. Do not report public-domain material merely because it is copied, but modern translations, annotations, editions, and images may remain protected. Check recent reports to avoid duplicates. Tell the user the report ID and that it is an unverified suspicion for operator review, not a legal finding; the private operator GitHub issue is not exposed. Never include credentials, authorization headers, email, personal data, or exploit payloads."""
 SERVER_INSTRUCTIONS += """
 For a cover, use upload_cover_image rather than embedding it in a chapter or sending a remote URL. Ask the author to approve the exact local PNG, JPEG, or WebP and confirm that they hold publication rights before setting rights_confirmed=true. Never infer approval for an AI-generated, suggested, stock, or previously used image. Share the returned draft_preview_url and ask the author to inspect the 2:3 center crop; replace it if requested. A cover update changes only the draft and invalidates any pending review, while an existing published snapshot remains unchanged until a new review is approved. Published cover traffic goes directly to the immutable public GitHub snapshot."""
+SERVER_INSTRUCTIONS += """
+For social sharing, offer a restrained 1200x630 book card and optional chapter cards for distinctive scenes. Use upload_share_card only after the author approves the exact image and confirms publication rights. Keep crop-safe margins and make a representative static frame for animated chapters. Humanread publishes immutable share/book.webp or share/chapters/{position}.webp files; a missing chapter card falls back to the book card or cover."""
 
 
 class HumanreadTokenVerifier(TokenVerifier):
@@ -309,6 +311,42 @@ async def upload_cover_image_base64(novel_id: int, content_base64: str, rights_c
     if not content or len(content) > 10 * 1024 * 1024:
         raise ValueError("Cover must be no larger than 10 MB")
     return await call("POST", f"/api/v1/novels/{novel_id}/cover", {"content_base64": content_base64, "rights_confirmed": True})
+
+
+@mcp.tool()
+async def upload_share_card(novel_id: int, image_path: str, chapter_id: int = 0, rights_confirmed: bool = False) -> dict:
+    """Set a 1200x630 book or chapter social card from a local image.
+
+    Use chapter_id=0 for the whole book. Obtain approval of the exact image and
+    publication rights first. Use a representative static frame for animation.
+    """
+    if not rights_confirmed:
+        raise ValueError("Confirm with the author that they have rights to use and publish this share card")
+    path = Path(image_path)
+    if not path.is_file() or path.stat().st_size > 10 * 1024 * 1024:
+        raise ValueError("Share card must be a local PNG, JPEG, or WebP no larger than 10 MB")
+    return await call("POST", f"/api/v1/novels/{novel_id}/share-card", {"content_base64": base64.b64encode(path.read_bytes()).decode(), "chapter_id": chapter_id or None, "rights_confirmed": True})
+
+
+@mcp.tool()
+async def upload_share_card_base64(novel_id: int, content_base64: str, chapter_id: int = 0, rights_confirmed: bool = False) -> dict:
+    """Set a book or chapter social card through remote MCP using base64 image bytes."""
+    if not rights_confirmed:
+        raise ValueError("Confirm with the author that they have rights to use and publish this share card")
+    try:
+        content = base64.b64decode(content_base64, validate=True)
+    except (ValueError, TypeError) as exc:
+        raise ValueError("content_base64 must be valid base64 image bytes") from exc
+    if not content or len(content) > 10 * 1024 * 1024:
+        raise ValueError("Share card must be no larger than 10 MB")
+    return await call("POST", f"/api/v1/novels/{novel_id}/share-card", {"content_base64": content_base64, "chapter_id": chapter_id or None, "rights_confirmed": True})
+
+
+@mcp.tool()
+async def remove_share_card(novel_id: int, chapter_id: int = 0) -> dict:
+    """Remove a draft book or chapter share card without changing a published snapshot."""
+    suffix = f"?chapter_id={chapter_id}" if chapter_id > 0 else ""
+    return await call("DELETE", f"/api/v1/novels/{novel_id}/share-card{suffix}")
 
 
 @mcp.tool()
