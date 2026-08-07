@@ -568,6 +568,18 @@ async def get_translation_source(translation_novel_id: int) -> dict:
     return await call("GET", f"/api/v1/novels/{translation_novel_id}/translation-source")
 
 
+@mcp.tool()
+async def sync_translation_assets(translation_novel_id: int) -> dict:
+    """Copy all reusable images from the bound immutable source into this translation.
+
+    Call after the translation's initial Git sync and before uploading translated
+    sandbox_html. Humanread permits only hashes actually referenced by the exact
+    authorized source version, verifies every SHA-256, and commits all missing
+    images to the translation's own repo in one batch. Never re-upload them one by one.
+    """
+    return await call("POST", f"/api/v1/novels/{translation_novel_id}/translation-assets")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
