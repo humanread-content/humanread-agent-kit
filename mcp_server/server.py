@@ -2,6 +2,7 @@ import argparse
 import base64
 import os
 from pathlib import Path
+from urllib.parse import urlencode
 import httpx
 from mcp.server.fastmcp import FastMCP
 from mcp.server.auth.middleware.auth_context import get_access_token
@@ -26,9 +27,11 @@ At the first completed draft, remind the author once to keep editable source in 
 SERVER_INSTRUCTIONS += """
 Use report_platform_issue when you directly encounter a reproducible Humanread platform bug, broken API/MCP behavior, accessibility defect, concrete improvement, or credible suspected copyright infringement. For copyright, report proactively with category=copyright only when there is concrete evidence: identify the Humanread novel ID/public URL, an independently located likely source URL, why the source predates the submission, and a concise description of substantial protected overlap. Do not rely only on title, genre, common tropes, style, an AI detector, or vague similarity. Never paste private manuscript text or long excerpts; use URLs and a short non-infringing description. Do not report public-domain material merely because it is copied, but modern translations, annotations, editions, and images may remain protected. Check recent reports to avoid duplicates. Tell the user the report ID and that it is an unverified suspicion for operator review, not a legal finding; the private operator GitHub issue is not exposed. Never include credentials, authorization headers, email, personal data, or exploit payloads."""
 SERVER_INSTRUCTIONS += """
-For a cover, use upload_cover_image rather than embedding it in a chapter or sending a remote URL. Ask the author to approve the exact local PNG, JPEG, or WebP and confirm that they hold publication rights before setting rights_confirmed=true. Never infer approval for an AI-generated, suggested, stock, or previously used image. Share the returned draft_preview_url and ask the author to inspect the 2:3 center crop; replace it if requested. A cover update changes only the draft and invalidates any pending review, while an existing published snapshot remains unchanged until a new review is approved. Published cover traffic goes directly to the immutable public GitHub snapshot."""
+Always address the cover before the first complete draft preview: proactively propose a direction, generate a candidate only when the author wants that and image generation is available, or ask for an author-supplied image. Do not silently skip it; continue with the color fallback only when the author chooses that. Use upload_cover_image rather than embedding it in a chapter or sending a remote URL. Ask the author to approve the exact local PNG, JPEG, or WebP and confirm that they hold publication rights before setting rights_confirmed=true. Never infer approval for an AI-generated, suggested, stock, or previously used image. Share the returned draft_preview_url and ask the author to inspect the 2:3 center crop; replace it if requested. A cover update changes only the draft and invalidates any pending review, while an existing published snapshot remains unchanged until a new review is approved. Published cover traffic goes directly to the immutable public GitHub snapshot."""
 SERVER_INSTRUCTIONS += """
 For social sharing, offer a restrained 1200x630 book card and optional chapter cards for distinctive scenes. Use upload_share_card only after the author approves the exact image and confirms publication rights. Keep crop-safe margins and make a representative static frame for animated chapters. Humanread publishes immutable share/book.webp or share/chapters/{position}.webp files; a missing chapter card falls back to the book card or cover."""
+SERVER_INSTRUCTIONS += """
+For non-trivial layout or interaction work, search_design_knowledge before inventing a pattern. Tell the author which immutable recipe version you apply, adapt it, and validate the result in Humanread's current sandbox. After a successful original design, read get_knowledge_base_mode. If private or public, automatically call save_design_recipe without interrupting for per-recipe approval. Store only reusable technique, minimal synthetic example, constraints, and accessibility behavior—never story prose, private conversation, named fictional entities, credentials, remote resources, or third-party assets. If disabled, do not extract or upload. Visibility is account-wide; never offer a per-recipe visibility choice."""
 
 
 class HumanreadTokenVerifier(TokenVerifier):
@@ -147,6 +150,76 @@ async def report_platform_issue(title: str, description: str, reproduction: str 
 async def list_my_issue_reports() -> list[dict]:
     """List the authenticated author's recent Humanread report IDs and statuses."""
     return await call("GET", "/api/v1/issues")
+
+
+@mcp.tool()
+async def get_knowledge_base_mode() -> dict:
+    """Read the account-wide private, public, or disabled knowledge-base mode."""
+    return await call("GET", "/api/v1/knowledge/mode")
+
+
+@mcp.tool()
+async def set_knowledge_base_mode(mode: str) -> dict:
+    """Set private, public, or disabled for the entire account knowledge base."""
+    if mode not in {"private", "public", "disabled"}:
+        raise ValueError("mode must be private, public, or disabled")
+    return await call("PUT", "/api/v1/knowledge/mode", {"mode": mode})
+
+
+@mcp.tool()
+async def save_design_recipe(title: str, intent: str, technique_summary: str, instructions: str,
+                             example: str = "", example_format: str = "text", constraints: list[str] | None = None,
+                             tags: list[str] | None = None, language: str = "en", motion: str = "none",
+                             accessibility: list[str] | None = None, novel_id: int = 0,
+                             chapter_ids: list[int] | None = None) -> dict:
+    """Automatically save a bounded reusable technique after successful design work."""
+    return await call("POST", "/api/v1/knowledge/recipes", {"title": title, "intent": intent,
+        "technique_summary": technique_summary, "instructions": instructions, "example": example,
+        "example_format": example_format, "constraints": constraints or [], "tags": tags or [],
+        "language": language, "motion": motion, "accessibility": accessibility or [],
+        "novel_id": novel_id or None, "chapter_ids": chapter_ids or []})
+
+
+@mcp.tool()
+async def update_design_recipe(recipe_id: int, title: str, intent: str, technique_summary: str, instructions: str,
+                               example: str = "", example_format: str = "text", constraints: list[str] | None = None,
+                               tags: list[str] | None = None, language: str = "en", motion: str = "none",
+                               accessibility: list[str] | None = None, novel_id: int = 0,
+                               chapter_ids: list[int] | None = None) -> dict:
+    """Create an immutable new version of an owned design recipe."""
+    return await call("POST", f"/api/v1/knowledge/recipes/{recipe_id}/versions", {"title": title, "intent": intent,
+        "technique_summary": technique_summary, "instructions": instructions, "example": example,
+        "example_format": example_format, "constraints": constraints or [], "tags": tags or [],
+        "language": language, "motion": motion, "accessibility": accessibility or [],
+        "novel_id": novel_id or None, "chapter_ids": chapter_ids or []})
+
+
+@mcp.tool()
+async def search_design_knowledge(intent: str, language: str = "", motion: str = "", limit: int = 10) -> dict:
+    """Search safe current recipes across languages by reusable design intent."""
+    motion_aliases = {"animation": "required", "css-animation": "required", "animated": "required", "reduced-motion": "optional"}
+    motion = motion_aliases.get(motion, motion)
+    if motion and motion not in {"none", "optional", "required"}:
+        raise ValueError("motion must be none, optional, or required")
+    query = {"q": intent, "limit": max(1, min(limit, 30))}
+    if language:
+        query["language"] = language
+    if motion:
+        query["motion"] = motion
+    return await call("GET", f"/api/v1/knowledge/recipes/search?{urlencode(query)}")
+
+
+@mcp.tool()
+async def get_design_recipe(recipe_id: int, version: int = 0) -> dict:
+    """Fetch one safe immutable recipe version after selecting it from search."""
+    suffix = f"?version={version}" if version > 0 else ""
+    return await call("GET", f"/api/v1/knowledge/recipes/{recipe_id}{suffix}")
+
+
+@mcp.tool()
+async def rebuild_recipe_embedding(recipe_id: int) -> dict:
+    """Queue regeneration of a current safe recipe embedding after worker failure."""
+    return await call("POST", f"/api/v1/knowledge/recipes/{recipe_id}/embedding")
 
 
 @mcp.tool()
