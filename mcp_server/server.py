@@ -2,6 +2,7 @@ import argparse
 import base64
 import os
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlencode
 import httpx
 from mcp.server.fastmcp import FastMCP
@@ -173,7 +174,7 @@ async def set_knowledge_base_mode(mode: str) -> dict:
 @mcp.tool()
 async def save_design_recipe(title: str, intent: str, technique_summary: str, instructions: str,
                              example: str = "", example_format: str = "text", constraints: list[str] | None = None,
-                             tags: list[str] | None = None, language: str = "en", motion: str = "none",
+                             tags: list[str] | None = None, language: str = "en", motion: Literal["none", "optional", "required"] = "none",
                              accessibility: list[str] | None = None, novel_id: int = 0,
                              chapter_ids: list[int] | None = None) -> dict:
     """Automatically save a bounded reusable technique after successful design work."""
@@ -187,7 +188,7 @@ async def save_design_recipe(title: str, intent: str, technique_summary: str, in
 @mcp.tool()
 async def update_design_recipe(recipe_id: int, title: str, intent: str, technique_summary: str, instructions: str,
                                example: str = "", example_format: str = "text", constraints: list[str] | None = None,
-                               tags: list[str] | None = None, language: str = "en", motion: str = "none",
+                               tags: list[str] | None = None, language: str = "en", motion: Literal["none", "optional", "required"] = "none",
                                accessibility: list[str] | None = None, novel_id: int = 0,
                                chapter_ids: list[int] | None = None) -> dict:
     """Create an immutable new version of an owned design recipe."""
@@ -199,7 +200,7 @@ async def update_design_recipe(recipe_id: int, title: str, intent: str, techniqu
 
 
 @mcp.tool()
-async def search_design_knowledge(intent: str, language: str = "", motion: str = "", limit: int = 10) -> dict:
+async def search_design_knowledge(intent: str, language: str = "", motion: Literal["", "none", "optional", "required"] = "", limit: int = 10) -> dict:
     """Search safe current recipes across languages by reusable design intent."""
     motion_aliases = {"animation": "required", "css-animation": "required", "animated": "required", "reduced-motion": "optional"}
     motion = motion_aliases.get(motion, motion)
