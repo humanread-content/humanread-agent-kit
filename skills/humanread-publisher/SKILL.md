@@ -7,6 +7,28 @@ description: Design, upload, safely theme, preview, review, and publish Markdown
 
 Use the `humanread` MCP tools for all live platform actions.
 
+## Young-writer workspaces
+
+Call `get_writer_workspace` before starting. `workspace` is `general`, `children`
+(7–12), or `teens` (13–17). A guardian sets up managed profiles and their scoped
+keys at `/family`; never connect a child's Agent using the guardian's general
+author key. The backend binds newly created works to that profile's audience.
+
+Keep the young writer involved: offer a few concrete ideas or questions, preserve
+their prose, and show proposed rewrites before applying them. Uploads, covers,
+share cards, same-novel image assets, and safe CSS sandbox layouts remain available.
+Do not include real-world contact details or external links. Use meaningful alt
+text, readable type, and reduced-motion behavior. Third-party Agent eligibility
+is outside this Humanread workflow.
+
+For managed profiles, call `set_publication_status(review)` and return the
+`guardian_review_url`. The guardian approves the exact immutable version in the
+family center. Do not call direct `published` or `approve_review_version` with a
+child key, substitute another identity, or recreate a work to bypass restrictions.
+Edits invalidate the pending review. Private-source and public-snapshot Git storage
+works exactly as for the general site. Knowledge contribution is disabled for
+managed profiles; do not change it or extract their stories into recipes.
+
 ## Connect an author
 
 - If MCP authentication is missing, stop and tell the user to open `https://humanread.surl.tw/login`, sign in with Google, accept the current terms, and generate an API key in Author Studio.

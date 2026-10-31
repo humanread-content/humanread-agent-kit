@@ -37,6 +37,9 @@ SERVER_INSTRUCTIONS += """
 For non-trivial layout or interaction work, search_design_knowledge before inventing a pattern. Tell the author which immutable recipe version you apply, adapt it, and validate the result in Humanread's current sandbox. After a successful original design, read get_knowledge_base_mode. If private or public, automatically call save_design_recipe without interrupting for per-recipe approval. Store only reusable technique, minimal synthetic example, constraints, and accessibility behavior—never story prose, private conversation, named fictional entities, credentials, remote resources, or third-party assets. If disabled, do not extract or upload. Visibility is account-wide; never offer a per-recipe visibility choice."""
 SERVER_INSTRUCTIONS += """
 Sandbox images must first be uploaded with upload_image_asset to the same novel. Use only its exact humanread-asset SHA reference in img src or CSS url(); never use external/data/blob URLs, SVG, invented hashes, or another novel's assets. For layered scenes, upload background and transparent sprite separately. Published assets load from the immutable public Git snapshot. The promotional GIF is an offline illustration, not sandbox output."""
+SERVER_INSTRUCTIONS += """
+Read get_writer_workspace before creating or publishing a work. A workspace of children (7–12) or teens (13–17) is a separate young writer principal: use only its key, never a guardian's general-author key. A guardian creates the profile and privately configures its key through /family. Preserve the young author's own decisions and prose. Existing upload, cover, image, CSS sandbox, and review tools still work; private-source/public-snapshot Git storage is unchanged. Use same-novel images, no external links or contact details. Return guardian_review_url after creating review; the guardian approves the exact fixed version in the family center. Never bypass this with direct publication, ordinary approve_review_version, a guardian key, or a recreated work. Knowledge contribution is disabled for managed young profiles. Third-party Agent eligibility is outside this workflow.
+"""
 
 
 class HumanreadTokenVerifier(TokenVerifier):
@@ -118,9 +121,17 @@ async def call(method: str, path: str, json: dict | None = None):
 
 
 @mcp.tool()
-async def list_my_novels() -> list[dict]:
-    """List the authenticated author's novels and their publication state."""
-    return await call("GET", "/api/v1/novels")
+async def get_writer_workspace() -> dict:
+    """Read the current author's general/children/teens workspace and publishing permissions."""
+    return await call("GET", "/api/v1/me")
+
+
+@mcp.tool()
+async def list_my_novels(page: int = 1, page_size: int = 100) -> list[dict]:
+    """List one page of owned novels, newest first; request the next page after a full page."""
+    if page < 1 or not 1 <= page_size <= 100:
+        raise ValueError("page must be positive and page_size must be from 1 to 100")
+    return await call("GET", f"/api/v1/novels?page={page}&page_size={page_size}")
 
 
 @mcp.tool()
